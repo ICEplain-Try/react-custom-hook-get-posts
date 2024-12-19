@@ -1,29 +1,11 @@
+// Import libraries และ Custom Hook
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
-import axios from "axios";
+import useBlogPosts from "../hooks/useBlogPosts";
 
 function ViewPostPage() {
-  const navigate = useNavigate();
-
-  const [posts, setPosts] = useState([]);
-  const [isError, setIsError] = useState(null);
-  const [isLoading, setIsLoading] = useState(null);
-
-  const getPosts = async () => {
-    try {
-      setIsError(false);
-      setIsLoading(true);
-      const results = await axios("http://localhost:4000/posts");
-      setPosts(results.data.data);
-      setIsLoading(false);
-    } catch (error) {
-      setIsError(true);
-    }
-  };
-
-  useEffect(() => {
-    getPosts();
-  }, []);
+  // ใช้งาน Custom Hook
+  const { posts, isError, isLoading } = useBlogPosts();
+  const navigate = useNavigate(); // ใช้สำหรับ Navigation
 
   return (
     <div>
@@ -36,21 +18,31 @@ function ViewPostPage() {
       <hr />
       <div className="show-all-posts-container">
         <h2>All Posts</h2>
-        {posts.map((post) => {
+        {/* วนลูปแสดง Blog Posts */}
+        {posts.map(function (post) {
           return (
             <div key={post.id} className="post">
               <h1>{post.title}</h1>
               <div className="post-actions">
-                <button className="view-button">View post</button>
+                <button
+                  className="view-button"
+                  onClick={function () {
+                    navigate(`/post/view/${post.id}`);
+                  }}
+                >
+                  View post
+                </button>
               </div>
             </div>
           );
         })}
+        {/* แสดงข้อความ Error ถ้าเกิด Error */}
         {isError ? <h1>Request failed</h1> : null}
+        {/* แสดง Loading ระหว่างดึงข้อมูล */}
         {isLoading ? <h1>Loading ....</h1> : null}
       </div>
 
-      <button onClick={() => navigate("/")}>Back to Home</button>
+      <button onClick={function () { navigate("/"); }}>Back to Home</button>
     </div>
   );
 }

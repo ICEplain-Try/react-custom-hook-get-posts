@@ -2,6 +2,7 @@ import express from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
 
+// Mock data (Post list)
 let posts = [
   {
     id: 1,
@@ -19,97 +20,140 @@ let posts = [
   },
 ];
 
+// Initialize Express app
 const app = express();
-
 const port = 4000;
 
+// Middleware
 app.use(cors());
-
 app.use(bodyParser.json());
 
+// Utility function for validation
+function validatePostInput(post) {
+  if (!post.title || typeof post.title !== "string") {
+    return "Title is required and must be a string.";
+  }
+  if (!post.content || typeof post.content !== "string") {
+    return "Content is required and must be a string.";
+  }
+  return null;
+}
+
+// Routes
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
+// Get all posts
 app.get("/posts", (req, res) => {
   return res.json({
+    success: true,
     data: posts,
   });
 });
 
+// Get post by ID
 app.get("/posts/:id", (req, res) => {
   const postId = +req.params.id;
-  const hasFound = posts.find((post) => post.id === postId);
+  const foundPost = posts.find((post) => post.id === postId);
 
-  if (!hasFound) {
+  if (!foundPost) {
     return res.status(404).json({
-      message: `Post ${postId} not found`,
+      success: false,
+      message: `Post with ID ${postId} not found.`,
     });
   }
 
-  const post = posts.filter((post) => post.id === postId);
-
   return res.json({
-    data: post[0],
+    success: true,
+    data: foundPost,
   });
 });
 
+// Create a new post
 app.post("/posts", (req, res) => {
-  posts.push({
-    id: posts[posts.length - 1].id + 1,
-    ...req.body,
-  });
+  const validationError = validatePostInput(req.body);
 
-  return res.json({
-    message: "Post has been created.",
-  });
-});
-
-app.put("/posts/:id", (req, res) => {
-  const updatedPost = req.body;
-  const postId = +req.params.id;
-  const hasFound = posts.find((post) => post.id === postId);
-
-  if (!hasFound) {
-    return res.status(404).json({
-      message: `Post ${postId} not found`,
+  if (validationError) {
+    return res.status(400).json({
+      success: false,
+      message: validationError,
     });
   }
 
-  const postIndex = posts.findIndex((post) => {
-    return post.id === +postId;
-  });
+  const newPost = {
+    id: posts.length ? posts[posts.length - 1].id + 1 : 1, // Generate new ID
+    ...req.body,
+  };
 
-  posts[postIndex] = { id: postId, ...updatedPost };
+  posts.push(newPost);
 
-  return res.json({
-    message: `Post ${postId} has been updated.`,
+  return res.status(201).json({
+    success: true,
+    message: "Post has been created.",
+    data: newPost,
   });
 });
 
+// Update a post by ID
+app.put("/posts/:id", (req, res) => {
+  const postId = +req.params.id;
+  const foundIndex = posts.findIndex((post) => post.id === postId);
+
+  if (foundIndex === -1) {
+    return res.status(404).json({
+      success: false,
+      message: `Post with ID ${postId} not found.`,
+    });
+  }
+
+  const validationError = validatePostInput(req.body);
+
+  if (validationError) {
+    return res.status(400).json({
+      success: false,
+      message: validationError,
+    });
+  }
+
+  posts[foundIndex] = { id: postId, ...req.body };
+
+  return res.json({
+    success: true,
+    message: `Post with ID ${postId} has been updated.`,
+    data: posts[foundIndex],
+  });
+});
+
+// Delete a post by ID
 app.delete("/posts/:id", (req, res) => {
   const postId = +req.params.id;
-  const hasFound = posts.find((post) => post.id === postId);
+  const foundIndex = posts.findIndex((post) => post.id === postId);
 
-  if (!hasFound) {
+  if (foundIndex === -1) {
     return res.status(404).json({
-      message: `Post ${postId} not found`,
+      success: false,
+      message: `Post with ID ${postId} not found.`,
     });
   }
 
-  posts = posts.filter((post) => {
-    return postId !== post.id;
-  });
+  posts = posts.filter((post) => post.id !== postId);
 
   return res.json({
-    message: `Post ${postId} has been deleted.`,
+    success: true,
+    message: `Post with ID ${postId} has been deleted.`,
   });
 });
 
-app.get("*", (req, res) => {
-  res.status(404).send("Not found");
+// Handle 404 errors
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: "Route not found.",
+  });
 });
 
+// Start the server
 app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
+  console.log(`Server is running at http://localhost:${port}`);
 });
